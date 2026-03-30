@@ -5,84 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --accent: #9d4edd; --bg: #0d0215; }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .wheel-box { position: relative; width: 320px; height: 320px; filter: drop-shadow(0 0 20px rgba(157, 78, 221, 0.3)); }
-        canvas { width: 100%; height: 100%; border-radius: 50%; border: 8px solid #1a0a2e; transition: transform 5s cubic-bezier(0.2, 0, 0, 1); }
-        .pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 30px; height: 40px; background: #ff00ff; clip-path: polygon(50% 100%, 0 0, 100% 0); z-index: 10; filter: drop-shadow(0 0 5px #ff00ff); }
-        .center-dot { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; background: var(--accent); border-radius: 50%; z-index: 5; box-shadow: 0 0 15px var(--accent); border: 4px solid #1a0a2e; }
-        h1 { font-size: 24px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); text-shadow: 0 0 10px var(--accent); }
-        button { background: linear-gradient(45deg, #3c096c, #9d4edd); border: none; padding: 16px 50px; color: white; border-radius: 30px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 20px rgba(157, 78, 221, 0.5); margin-top: 30px; }
-        button:active { transform: scale(0.95); }
-        button:disabled { background: #333; box-shadow: none; opacity: 0.6; }
+        body { background: #0a0a0c; color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { position: relative; width: 300px; height: 300px; }
+        #wheel { width: 100%; height: 100%; border-radius: 50%; border: 5px solid #1a1a1f; box-shadow: 0 0 30px rgba(157, 78, 221, 0.2); transition: transform 5s cubic-bezier(0.1, 0, 0, 1); }
+        .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 25px; height: 30px; background: #9d4edd; clip-path: polygon(50% 100%, 0 0, 100% 0); z-index: 10; filter: drop-shadow(0 0 5px #9d4edd); }
+        .center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 15px; height: 15px; background: white; border-radius: 50%; z-index: 5; box-shadow: 0 0 10px white; }
+        button { margin-top: 40px; background: #9d4edd; border: none; padding: 15px 45px; color: white; border-radius: 12px; font-weight: 800; font-size: 16px; box-shadow: 0 4px 15px rgba(157, 78, 221, 0.4); }
+        button:disabled { background: #2c2c34; box-shadow: none; color: #555; }
+        h2 { color: #9d4edd; text-transform: uppercase; letter-spacing: 3px; font-size: 18px; margin-bottom: 30px; }
     </style>
 </head>
 <body>
-    <h1>Armor Lucky Wheel</h1>
-    <div class="wheel-box">
+    <h2>Armor Lucky Wheel</h2>
+    <div class="container">
         <div class="pointer"></div>
-        <div class="center-dot"></div>
+        <div class="center"></div>
         <canvas id="wheel" width="500" height="500"></canvas>
     </div>
-    <button id="spin-btn" onclick="spin()">ИСПЫТАТЬ УДАЧУ</button>
+    <button id="spin-btn" onclick="spin()">КРУТИТЬ</button>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
         const canvas = document.getElementById('wheel');
         const ctx = canvas.getContext('2d');
-
-        // Сектора и их веса (награды)
         const sectors = [
-            { label: "0₽", color: "#1a0a2e", value: 0 },
-            { label: "1₽", color: "#240046", value: 1 },
-            { label: "2₽", color: "#3c096c", value: 2 },
-            { label: "0₽", color: "#1a0a2e", value: 0 },
-            { label: "5₽", color: "#5a189a", value: 5 },
-            { label: "1₽", color: "#240046", value: 1 },
-            { label: "JACKPOT", color: "#ff00ff", value: 100 },
-            { label: "0₽", color: "#1a0a2e", value: 0 }
+            {v: 0, c: "#13131a", l: "0₽"}, {v: 2, c: "#240046", l: "2₽"},
+            {v: 0, c: "#13131a", l: "0₽"}, {v: 5, c: "#3c096c", l: "5₽"},
+            {v: 1, c: "#1a1a1f", l: "1₽"}, {v: 10, c: "#5a189a", l: "10₽"},
+            {v: 0, c: "#13131a", l: "0₽"}, {v: 100, c: "#9d4edd", l: "JACKPOT"}
         ];
 
         function draw() {
-            const ang = (2 * Math.PI) / sectors.length;
+            const arc = (2 * Math.PI) / sectors.length;
             sectors.forEach((s, i) => {
-                ctx.beginPath(); ctx.fillStyle = s.color; ctx.moveTo(250, 250);
-                ctx.arc(250, 250, 250, i * ang, (i + 1) * ang); ctx.fill();
-                ctx.save(); ctx.translate(250, 250); ctx.rotate(i * ang + ang/2);
-                ctx.textAlign = "right"; ctx.fillStyle = "white"; ctx.font = "bold 24px sans-serif";
-                ctx.fillText(s.label, 230, 10); ctx.restore();
+                ctx.beginPath(); ctx.fillStyle = s.c; ctx.moveTo(250, 250);
+                ctx.arc(250, 250, 250, i * arc, (i + 1) * arc); ctx.fill();
+                ctx.save(); ctx.translate(250, 250); ctx.rotate(i * arc + arc/2);
+                ctx.textAlign = "right"; ctx.fillStyle = "white"; ctx.font = "bold 30px Arial";
+                ctx.fillText(s.l, 230, 10); ctx.restore();
             });
         }
         draw();
 
         function spin() {
-            const btn = document.getElementById('spin-btn');
-            btn.disabled = true;
-
-            // Настройка шансов: заставляем колесо чаще останавливаться на мелких призах
-            // 0-360 градусов. Джекпот на секторе 6.
-            const forceLoss = Math.random() > 0.1; // 90% шанс на обычный исход
-            let extraDeg = forceLoss ? (Math.random() * 200) : (Math.random() * 360);
-
-            const totalDeg = 3600 + extraDeg;
-            canvas.style.transform = `rotate(${totalDeg}deg)`;
+            document.getElementById('spin-btn').disabled = true;
+            const deg = 3600 + Math.random() * 3600;
+            canvas.style.transform = `rotate(${deg}deg)`;
 
             setTimeout(() => {
-                const actualDeg = totalDeg % 360;
-                const arc = 360 / sectors.length;
-                const index = Math.floor((360 - actualDeg) / arc) % sectors.length;
-                const reward = sectors[index].value;
+                const actualDeg = deg % 360;
+                const index = Math.floor((360 - actualDeg) / (360 / sectors.length)) % sectors.length;
+                const reward = sectors[index].v;
 
                 fetch('http://130.49.213.100:8080/claim_reward', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ user_id: tg.initDataUnsafe.user.id, reward: reward })
                 })
-                .then(r => r.ok ? tg.showAlert(`🎁 Результат: ${sectors[index].label}`) : tg.showAlert("❌ Сегодня вы уже крутили!"))
-                .catch(() => tg.showAlert("📡 Ошибка связи с сервером (Проверьте CORS)"))
+                .then(r => r.ok ? tg.showAlert(`🎁 Выпало: ${sectors[index].l}`) : tg.showAlert("❌ Ошибка или лимит (24ч)"))
+                .catch(() => tg.showAlert("📡 Ошибка CORS! Проверь Python."))
                 .finally(() => tg.close());
-            }, 5200);
+            }, 5000);
         }
     </script>
 </body>
