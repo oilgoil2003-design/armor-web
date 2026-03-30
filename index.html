@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { background: #0f051a; color: white; font-family: sans-serif; text-align: center; overflow: hidden; }
+        .wheel-container { position: relative; width: 300px; height: 300px; margin: 50px auto; }
+        #wheel { width: 100%; height: 100%; border-radius: 50%; border: 5px solid #9d4edd; transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1); box-shadow: 0 0 20px #9d4edd; }
+        .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 20px; height: 40px; background: #ff00ff; clip-path: polygon(50% 100%, 0 0, 100% 0); z-index: 10; }
+        button { background: linear-gradient(45deg, #3c096c, #9d4edd); border: none; padding: 15px 40px; color: white; border-radius: 25px; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 15px rgba(157, 78, 221, 0.4); }
+        button:disabled { opacity: 0.5; }
+    </style>
+</head>
+<body>
+    <h2>Armor Roulette</h2>
+    <div class="wheel-container">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="300" height="300"></canvas>
+    </div>
+    <button id="spin-btn" onclick="spin()">КРУТИТЬ БЕСПЛАТНО</button>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        const ctx = document.getElementById('wheel').getContext('2d');
+        const sectors = [5, 0, 10, 0, 50, 0, 5, 15]; // Призы в рублях
+        const colors = ['#240046', '#3c096c', '#5a189a', '#7b2cbf', '#9d4edd', '#c77dff', '#e0aaff', '#3c096c'];
+
+        function drawWheel() {
+            const arc = (2 * Math.PI) / sectors.length;
+            sectors.forEach((s, i) => {
+                ctx.fillStyle = colors[i];
+                ctx.beginPath(); ctx.moveTo(150, 150);
+                ctx.arc(150, 150, 145, i * arc, (i + 1) * arc);
+                ctx.fill();
+                ctx.fillStyle = "white"; ctx.fillText(s + "₽", 220, 160); // Упрощенно
+            });
+        }
+        drawWheel();
+
+        function spin() {
+            const btn = document.getElementById('spin-btn');
+            btn.disabled = true;
+            const randomDeg = Math.floor(3600 + Math.random() * 3600);
+            document.getElementById('wheel').style.transform = `rotate(${randomDeg}deg)`;
+
+            setTimeout(() => {
+                const actualDeg = randomDeg % 360;
+                const sectorIndex = Math.floor((360 - actualDeg) / (360 / sectors.length)) % sectors.length;
+                const reward = sectors[sectorIndex];
+
+                // ОТПРАВКА ДАННЫХ НА ТВОЙ СЕРВЕР
+                fetch('http://130.49.213.100:8080/claim_reward', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: tg.initDataUnsafe.user.id,
+                        reward: reward
+                    })
+                })
+                .then(response => {
+                    if (response.ok) {
+                        tg.showAlert(`✅ Успех! Вы выиграли ${reward}₽. Баланс скоро обновится.`);
+                    } else {
+                        tg.showAlert("⚠️ Ошибка: Возможно, 24 часа еще не прошли.");
+                    }
+                    tg.close();
+                })
+                .catch(error => {
+                    tg.showAlert("❌ Ошибка связи с сервером. Попробуйте позже.");
+                    tg.close();
+                });
+            }, 4500);
+        }
+    </script>
+</body>
+</html>
